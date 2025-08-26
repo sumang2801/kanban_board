@@ -1,0 +1,12 @@
+mutation CreateCard($title: String!, $description: String, $column_id: uuid!) {
+  insert_cards_one(object: {
+    title: $title
+    description: $description
+    column_id: $column_id
+  }) {
+    id
+    title
+    description
+    column_id
+  }
+}

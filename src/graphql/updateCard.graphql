@@ -1,0 +1,15 @@
+mutation UpdateCard($id: uuid!, $title: String, $description: String, $column_id: uuid) {
+  update_cards_by_pk(
+    pk_columns: { id: $id }
+    _set: {
+      title: $title
+      description: $description
+      column_id: $column_id
+    }
+  ) {
+    id
+    title
+    description
+    column_id
+  }
+}

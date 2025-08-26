@@ -1,0 +1,14 @@
+query GetBoard($id: uuid!) {
+  boards_by_pk(id: $id) {
+    id
+    name
+    columns {
+      id
+      cards {
+        id
+        title
+        description
+      }
+    }
+  }
+}

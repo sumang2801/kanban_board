@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Client Sync Demo Instructions</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 800px; 
+            margin: 0 auto; 
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .container { 
+            background: rgba(255,255,255,0.1); 
+            padding: 30px; 
+            border-radius: 15px; 
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        .step { 
+            margin: 20px 0; 
+            padding: 15px; 
+            background: rgba(255,255,255,0.1); 
+            border-radius: 8px; 
+            border-left: 4px solid #00ff88;
+        }
+        .browser-box {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 10px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 25px;
+            border: 2px solid #00ff88;
+        }
+        .demo-button {
+            background: #00ff88;
+            color: #333;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .demo-button:hover { background: #00cc70; }
+        .status { 
+            padding: 10px; 
+            background: rgba(0,255,136,0.2); 
+            border-radius: 5px; 
+            margin: 10px 0;
+        }
+        .code {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌐 Multi-Client Synchronization Demo</h1>
+        <p><strong>Real-time collaboration across different browsers, devices, and users!</strong></p>
+
+        <div class="status">
+            ✅ <strong>Server Status:</strong> Running on <code>http://localhost:3000</code><br>
+            🔄 <strong>Sync Method:</strong> Server-Sent Events (SSE) + Real-time Broadcasting<br>
+            🌍 <strong>Cross-Platform:</strong> Works across browsers, devices, and networks
+        </div>
+
+        <h2>📋 Demo Board</h2>
+        <a href="http://localhost:3000/boards/9ecd54bf-c4db-4766-97dd-c6758c0d2f04" class="demo-button" target="_blank">
+            Open Kanban Board
+        </a>
+
+        <h2>🧪 Step-by-Step Testing Guide</h2>
+
+        <div class="step">
+            <h3>Step 1: Open Multiple Browsers</h3>
+            <p>Open the board URL in different browsers:</p>
+            <div class="browser-box">🔵 Chrome</div>
+            <div class="browser-box">🦊 Firefox</div>
+            <div class="browser-box">🌐 Safari</div>
+            <div class="browser-box">📱 Mobile Browser</div>
+        </div>
+
+        <div class="step">
+            <h3>Step 2: Look for Connection Indicator</h3>
+            <p>In each browser, look for the <strong style="color: #00ff88;">green "Multi-Client Sync Active"</strong> indicator in the bottom-right corner.</p>
+            <p>This confirms the real-time connection is established.</p>
+        </div>
+
+        <div class="step">
+            <h3>Step 3: Test Card Creation</h3>
+            <p>In <strong>Browser 1</strong>:</p>
+            <ul>
+                <li>Click the "+ Add Card" button in any column</li>
+                <li>Enter a title like "Test Card from Browser 1"</li>
+                <li>Add a description (optional)</li>
+                <li>Click OK</li>
+            </ul>
+            <p><strong>Expected Result:</strong> The card should appear instantly in all other browsers!</p>
+        </div>
+
+        <div class="step">
+            <h3>Step 4: Test Card Movement</h3>
+            <p>In <strong>Browser 2</strong>:</p>
+            <ul>
+                <li>Drag a card from one column to another</li>
+                <li>Watch it move smoothly</li>
+            </ul>
+            <p><strong>Expected Result:</strong> All other browsers should show the card movement in real-time!</p>
+        </div>
+
+        <div class="step">
+            <h3>Step 5: Multiple Simultaneous Actions</h3>
+            <p>Have multiple people (or browsers) make changes simultaneously:</p>
+            <ul>
+                <li>Create cards in different browsers at the same time</li>
+                <li>Move multiple cards simultaneously</li>
+                <li>Watch the real-time synchronization handle all updates</li>
+            </ul>
+        </div>
+
+        <h2>🔧 Technical Testing</h2>
+
+        <div class="step">
+            <h3>Monitor Server-Sent Events Connection</h3>
+            <p>Open browser DevTools → Network tab → Look for:</p>
+            <div class="code">GET /api/subscribe/9ecd54bf-c4db-4766-97dd-c6758c0d2f04</div>
+            <p>This should show as a persistent connection with "text/event-stream" type.</p>
+        </div>
+
+        <div class="step">
+            <h3>Monitor Broadcast API Calls</h3>
+            <p>When you make changes, look for:</p>
+            <div class="code">POST /api/boards/9ecd54bf-c4db-4766-97dd-c6758c0d2f04/updates</div>
+            <p>These calls broadcast your changes to all other connected clients.</p>
+        </div>
+
+        <div class="step">
+            <h3>Console Monitoring</h3>
+            <p>Open Browser Console to see detailed sync logs:</p>
+            <div class="code">
+🔌 Connecting to multi-client sync for board: 9ecd54bf-c4db-4766-97dd-c6758c0d2f04<br>
+✅ Multi-client sync connected<br>
+📡 Received multi-client update: {...}<br>
+📤 Broadcasting card_moved update: {...}
+            </div>
+        </div>
+
+        <h2>📊 What to Screenshot</h2>
+        
+        <div class="step">
+            <h3>Perfect Demo Screenshots</h3>
+            <ol>
+                <li><strong>Side-by-side browsers:</strong> Show the same board open in 2+ browsers</li>
+                <li><strong>Connection indicators:</strong> Highlight the green sync status in each browser</li>
+                <li><strong>Before/After card creation:</strong> Show a card being created in one browser and appearing in another</li>
+                <li><strong>Drag and drop sync:</strong> Show a card mid-drag in one browser and the result in another</li>
+                <li><strong>Network tab:</strong> Show the SSE connections in DevTools</li>
+                <li><strong>Console logs:</strong> Show the real-time sync messages</li>
+            </ol>
+        </div>
+
+        <h2>🎯 Key Features to Highlight</h2>
+        <ul>
+            <li>✅ <strong>Instant synchronization</strong> - Changes appear immediately</li>
+            <li>✅ <strong>Cross-browser compatibility</strong> - Works in all modern browsers</li>
+            <li>✅ <strong>Cross-device support</strong> - Desktop, mobile, tablet</li>
+            <li>✅ <strong>Automatic reconnection</strong> - Handles network interruptions</li>
+            <li>✅ <strong>Multi-user collaboration</strong> - Multiple people can work together</li>
+            <li>✅ <strong>Visual feedback</strong> - Connection status indicator</li>
+        </ul>
+
+        <div style="margin-top: 40px; text-align: center; opacity: 0.8;">
+            <p>🚀 <strong>Your Kanban board now has enterprise-grade real-time collaboration!</strong></p>
+        </div>
+    </div>
+</body>
+</html>

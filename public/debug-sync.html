@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multi-Client Sync Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #1e293b; color: white; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .debug-section { margin: 20px 0; padding: 15px; border: 1px solid #374151; border-radius: 8px; }
+        .status { padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .connected { background: #065f46; }
+        .disconnected { background: #7f1d1d; }
+        .log { background: #111827; padding: 10px; border-radius: 4px; margin: 10px 0; max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px; }
+        button { background: #3b82f6; color: white; border: none; padding: 10px 15px; border-radius: 4px; margin: 5px; cursor: pointer; }
+        button:hover { background: #2563eb; }
+        .test-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        input { padding: 8px; margin: 5px; border-radius: 4px; border: 1px solid #374151; background: #374151; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Multi-Client Sync Debug Dashboard</h1>
+        
+        <div class="debug-section">
+            <h2>📡 Connection Status</h2>
+            <div id="connectionStatus" class="status disconnected">Disconnected</div>
+            <div id="clientInfo"></div>
+        </div>
+
+        <div class="debug-section">
+            <h2>🧪 Test Actions</h2>
+            <div class="test-actions">
+                <button onclick="testCardMove()">Test Card Move</button>
+                <button onclick="testCardCreate()">Test Card Create</button>
+                <button onclick="testCardUpdate()">Test Card Update</button>
+                <button onclick="connectSSE()">Connect SSE</button>
+                <button onclick="disconnectSSE()">Disconnect SSE</button>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <input type="text" id="cardTitle" placeholder="Card Title" value="Debug Test Card">
+                <input type="text" id="columnId" placeholder="Column ID" value="col-1">
+            </div>
+        </div>
+
+        <div class="debug-section">
+            <h2>📋 Activity Log</h2>
+            <div id="activityLog" class="log"></div>
+            <button onclick="clearLog()">Clear Log</button>
+        </div>
+
+        <div class="debug-section">
+            <h2>🌐 Live Board Data</h2>
+            <button onclick="openBoard()">Open Kanban Board</button>
+            <button onclick="openBoardNewTab()">Open Board in New Tab</button>
+        </div>
+    </div>
+
+    <script>
+        const boardId = '9ecd54bf-c4db-4766-97dd-c6758c0d2f04';
+        let eventSource = null;
+        let clientId = `debug_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+        function log(message) {
+            const logDiv = document.getElementById('activityLog');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${message}\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function updateStatus(connected) {
+            const statusDiv = document.getElementById('connectionStatus');
+            const clientInfoDiv = document.getElementById('clientInfo');
+            
+            if (connected) {
+                statusDiv.className = 'status connected';
+                statusDiv.textContent = '🟢 Connected to SSE';
+            } else {
+                statusDiv.className = 'status disconnected';
+                statusDiv.textContent = '🔴 Disconnected';
+            }
+            
+            clientInfoDiv.innerHTML = `
+                <p><strong>Client ID:</strong> ${clientId}</p>
+                <p><strong>Board ID:</strong> ${boardId}</p>
+                <p><strong>SSE URL:</strong> /api/subscribe/${boardId}</p>
+            `;
+        }
+
+        function connectSSE() {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            log('🔌 Connecting to SSE...');
+            eventSource = new EventSource(`/api/subscribe/${boardId}`);
+
+            eventSource.onopen = () => {
+                log('✅ SSE Connected');
+                updateStatus(true);
+            };
+
+            eventSource.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    log(`📡 Received: ${JSON.stringify(data, null, 2)}`);
+                } catch (error) {
+                    log(`❌ Error parsing SSE data: ${error.message}`);
+                }
+            };
+
+            eventSource.onerror = (error) => {
+                log('❌ SSE Error occurred');
+                updateStatus(false);
+            };
+        }
+
+        function disconnectSSE() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+                log('🔌 SSE Disconnected');
+                updateStatus(false);
+            }
+        }
+
+        async function broadcast(type, data) {
+            try {
+                log(`📤 Broadcasting ${type}: ${JSON.stringify(data)}`);
+                
+                const response = await fetch(`/api/boards/${boardId}/updates`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-client-id': clientId,
+                    },
+                    body: JSON.stringify({ type, data }),
+                });
+
+                const result = await response.json();
+                log(`✅ Broadcast result: ${JSON.stringify(result)}`);
+                
+            } catch (error) {
+                log(`❌ Broadcast failed: ${error.message}`);
+            }
+        }
+
+        function testCardMove() {
+            const data = {
+                cardId: `test-card-${Date.now()}`,
+                fromColumnId: 'col-1',
+                toColumnId: 'col-2',
+                toIndex: 0,
+                card: {
+                    id: `test-card-${Date.now()}`,
+                    title: 'Moved Test Card',
+                    description: 'Testing card movement'
+                }
+            };
+            broadcast('card_moved', data);
+        }
+
+        function testCardCreate() {
+            const title = document.getElementById('cardTitle').value || 'Debug Test Card';
+            const columnId = document.getElementById('columnId').value || 'col-1';
+            
+            const data = {
+                card: {
+                    id: `debug-card-${Date.now()}`,
+                    title: title,
+                    description: 'Created via debug dashboard'
+                },
+                columnId: columnId
+            };
+            broadcast('card_created', data);
+        }
+
+        function testCardUpdate() {
+            const data = {
+                updatedCard: {
+                    id: `update-test-${Date.now()}`,
+                    title: 'Updated Test Card',
+                    description: 'Updated via debug dashboard'
+                }
+            };
+            broadcast('card_updated', data);
+        }
+
+        function openBoard() {
+            window.open(`/boards/${boardId}`, '_blank');
+        }
+
+        function openBoardNewTab() {
+            window.open(`/boards/${boardId}`, '_blank');
+        }
+
+        function clearLog() {
+            document.getElementById('activityLog').innerHTML = '';
+        }
+
+        // Initialize
+        updateStatus(false);
+        log('🚀 Debug dashboard initialized');
+        log(`🔧 Client ID: ${clientId}`);
+        
+        // Auto-connect on load
+        setTimeout(connectSSE, 1000);
+    </script>
+</body>
+</html>
