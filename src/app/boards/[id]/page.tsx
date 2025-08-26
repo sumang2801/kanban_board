@@ -990,7 +990,7 @@ export default function BoardPage() {
         {/* Empty state if no columns */}
         {columns.length === 0 && (
           <div className="text-center text-gray-400 py-20">
-            <div className="text-6xl mb-4">📋</div>
+            <div className="text-6xl mb-4">�</div>
             <h3 className="text-xl font-semibold mb-2">No columns yet</h3>
             <p>Add columns to organize your tasks</p>
           </div>

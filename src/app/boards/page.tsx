@@ -34,8 +34,8 @@ function BoardsList() {
             <h3 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
               {board.name}
             </h3>
-            <div className="w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center">
-              🧁
+            <div className="w-8 h-8 bg-orange-400 rounded-lg flex items-center justify-center">
+              🪶
             </div>
           </div>
           <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
@@ -52,7 +52,7 @@ function BoardsList() {
       
       {(!data?.boards || data.boards.length === 0) && (
         <div className="col-span-full text-center p-12 text-gray-500">
-          <div className="text-6xl mb-4">📋</div>
+          <div className="text-6xl mb-4">🪶</div>
           <h3 className="text-xl font-semibold mb-2">No boards yet</h3>
           <p>Create your first Kanban board to get started!</p>
         </div>
@@ -77,32 +77,29 @@ export default function BoardsPage() {
         <div className="max-w-7xl mx-auto">
           <div className="flex justify-between items-center mb-8">
             <div>
-              <h1 className="text-5xl font-extrabold mb-2 text-blue-700 dark:text-blue-400 drop-shadow-lg">
-                🏗️ My Boards
+              <h1 className="text-4xl font-bold text-gray-800 dark:text-gray-100 mb-2">
+                My Boards
               </h1>
-              <p className="text-xl text-gray-600 dark:text-gray-300 font-medium">
+              <p className="text-gray-600 dark:text-gray-300">
                 Organize your projects with Kanban boards
               </p>
             </div>
-            
-            <div className="flex items-center gap-4">
+            <div className="flex items-center space-x-4">
               {user && (
-                <div className="text-right">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">Welcome back,</p>
-                  <p className="font-semibold text-gray-800 dark:text-gray-200">
-                    {user.displayName || user.email}
-                  </p>
+                <div className="flex items-center space-x-4">
+                  <span className="text-gray-600 dark:text-gray-300">
+                    Welcome, {user.displayName || user.email}
+                  </span>
+                  <button
+                    onClick={handleSignOut}
+                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    Sign Out
+                  </button>
                 </div>
               )}
-              <button
-                onClick={handleSignOut}
-                className="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-medium transition-all hover:shadow-lg"
-              >
-                Sign Out
-              </button>
             </div>
           </div>
-
           <div className="flex justify-center">
             <BoardsList />
           </div>
