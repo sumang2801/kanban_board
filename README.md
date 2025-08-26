@@ -142,4 +142,36 @@ pnpm codegen
 pnpm build
 ```
 
+## 🌐 Deployment
+
+### Deploy to Vercel
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/sumang2801/kanban_board)
+
+#### Required Environment Variables:
+```bash
+NEXT_PUBLIC_NHOST_SUBDOMAIN=your-nhost-subdomain
+NEXT_PUBLIC_NHOST_REGION=us-east-1
+HASURA_GRAPHQL_URL=https://your-subdomain.hasura.region.nhost.run/v1/graphql
+HASURA_ADMIN_SECRET=your-admin-secret
+NEXT_PUBLIC_HASURA_ADMIN_SECRET=your-admin-secret
+NEXT_PUBLIC_USE_MOCK_DATA=false
+```
+
+📖 **Detailed deployment guide**: See [DEPLOYMENT.md](./DEPLOYMENT.md) for step-by-step instructions.
+
+## 🔐 Environment Configuration
+
+Create a `.env.local` file with your Nhost credentials:
+
+```bash
+# Copy from .env.example and fill in your values
+NEXT_PUBLIC_NHOST_SUBDOMAIN=your-project-subdomain
+NEXT_PUBLIC_NHOST_REGION=your-region
+HASURA_GRAPHQL_URL=your-graphql-endpoint
+HASURA_ADMIN_SECRET=your-admin-secret
+NEXT_PUBLIC_HASURA_ADMIN_SECRET=your-admin-secret
+NEXT_PUBLIC_USE_MOCK_DATA=false
+```
+
 
