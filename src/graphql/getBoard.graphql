@@ -4,6 +4,7 @@ query GetBoard($id: uuid!) {
     name
     columns {
       id
+      name
       cards {
         id
         title

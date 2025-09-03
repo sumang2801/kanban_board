@@ -4,7 +4,6 @@ mutation UpdateCard($id: uuid!, $title: String, $description: String, $column_id
     _set: {
       title: $title
       description: $description
-      column_id: $column_id
     }
   ) {
     id

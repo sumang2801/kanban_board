@@ -8,6 +8,13 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import ConnectionStatus from '@/components/ConnectionStatus';
 import { useSignOut, useUserData, useAuthenticationStatus } from '@nhost/react';
 import { multiClientSubscriptionManager } from '@/lib/multiClientSync';
+import { Button } from '@/components/ui/button';
+import { Card as UICard, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, MoreHorizontal, User } from 'lucide-react';
 
 interface Card {
   id: string;
@@ -34,8 +41,8 @@ export default function BoardPage() {
 
   const { data: graphqlData, loading: graphqlLoading, error: graphqlError, refetch } = useGetBoardQuery({
     variables: { id: boardId },
-    fetchPolicy: 'cache-and-network', // Always fetch from network while showing cached data
-    notifyOnNetworkStatusChange: true
+    fetchPolicy: 'cache-first', // Use cached data first, only fetch from network if not in cache
+    notifyOnNetworkStatusChange: false // Don't notify on network changes to prevent re-renders
   });
 
   // Column mapping for multi-client sync (maps GraphQL UUIDs to standard column IDs)
@@ -44,12 +51,22 @@ export default function BoardPage() {
   const [columns, setColumns] = useState<Column[]>([]);
   const [forceReloadCounter, setForceReloadCounter] = useState(0);
 
-  // Color scheme for columns - moved outside to prevent re-creation
+  // Color scheme for columns - vibrant colors like Monday.com style
   const columnColors = useMemo(() => [
+    {
+      color: 'text-white',
+      bgColor: 'bg-red-500', 
+      addButtonColor: 'bg-red-600 hover:bg-red-700'
+    },
     {
       color: 'text-white',
       bgColor: 'bg-blue-500', 
       addButtonColor: 'bg-blue-600 hover:bg-blue-700'
+    },
+    {
+      color: 'text-white',
+      bgColor: 'bg-orange-500', 
+      addButtonColor: 'bg-orange-600 hover:bg-orange-700'
     },
     {
       color: 'text-white',
@@ -58,8 +75,8 @@ export default function BoardPage() {
     },
     {
       color: 'text-white',
-      bgColor: 'bg-orange-500', 
-      addButtonColor: 'bg-orange-600 hover:bg-orange-700'
+      bgColor: 'bg-purple-500', 
+      addButtonColor: 'bg-purple-600 hover:bg-purple-700'
     }
   ], []);
 
@@ -350,9 +367,33 @@ export default function BoardPage() {
       
       console.log('✅ Card creation result:', result);
       
-      // Broadcast to other clients using standard column ID
+      // Add optimistic update immediately after successful creation
       if (result.data?.insert_cards_one) {
         const createdCard = result.data.insert_cards_one;
+        console.log('🎉 Card successfully created:', createdCard);
+        
+        // Add card to UI immediately
+        setColumns(prevColumns => {
+          const updatedColumns = prevColumns.map(col => {
+            if (col.id === columnId) {
+              // Check if card already exists to avoid duplicates
+              const cardExists = col.cards.find(card => card.id === createdCard.id);
+              if (!cardExists) {
+                console.log(`✨ Adding card "${createdCard.title}" to column "${col.name}"`);
+                return { ...col, cards: [...col.cards, createdCard] };
+              }
+            }
+            return col;
+          });
+          
+          // Save updated columns to localStorage
+          localStorage.setItem(`kanban-cards-${boardId}`, JSON.stringify(updatedColumns));
+          console.log('💾 Updated columns saved to localStorage');
+          
+          return updatedColumns;
+        });
+        
+        // Broadcast to other clients using standard column ID
         const standardColumnId = columnMapping.get(columnId) || columnId;
         
         multiClientSubscriptionManager.broadcastUpdate(boardId, 'card_created', {
@@ -366,9 +407,9 @@ export default function BoardPage() {
         console.log(`📡 Broadcasted card creation with standard column ID: ${standardColumnId}`);
       }
       
-      // Refetch the board data to get the new card
-      await refetch();
-      console.log('📊 Board data refetched');
+      // DON'T refetch - this was causing cards to disappear
+      // await refetch();
+      console.log('✅ Card added without refetch to prevent disappearing');
     } catch (error) {
       console.error('❌ Error creating card, using local fallback:', error);
       
@@ -822,69 +863,83 @@ export default function BoardPage() {
   const board = graphqlData?.boards_by_pk;
 
   if (!board) return (
-    <div className="text-center p-8 min-h-screen bg-slate-800 flex items-center justify-center">
+    <div className="text-center p-8 min-h-screen bg-background flex items-center justify-center">
       <div>
-        <p className="text-xl mb-4 text-white">Board not found</p>
-        <button 
+        <p className="text-xl mb-4 text-foreground">Board not found</p>
+        <Button 
           onClick={() => router.push('/boards')}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+          className="bg-primary hover:bg-primary/90 text-primary-foreground"
         >
           Back to Boards
-        </button>
+        </Button>
       </div>
     </div>
   );
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-slate-800 flex">
-      {/* Dark Sidebar */}
-      <div className="w-64 bg-slate-900 p-6 flex-shrink-0">
+      <div className="min-h-screen bg-background flex">
+      {/* Sidebar */}
+      <div className="w-64 bg-muted/50 border-r p-6 flex-shrink-0">
         <div className="mb-8">
-          <button 
+          <Button 
+            variant="ghost"
+            size="sm"
             onClick={() => router.push('/boards')}
-            className="text-gray-400 hover:text-white text-sm mb-4 block"
+            className="text-muted-foreground hover:text-foreground mb-4"
           >
             ← Back to Boards
-          </button>
+          </Button>
           
           <div className="flex items-center mb-2">
             <div className="w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center mr-3">
               🧁
             </div>
-            <h1 className="text-white text-xl font-bold">{board.name}</h1>
+            <h1 className="text-foreground text-xl font-bold">{board.name}</h1>
           </div>
-          <p className="text-gray-400 text-sm">Kanban</p>
+          <p className="text-muted-foreground text-sm">Kanban</p>
         </div>
 
         <div className="space-y-6">
           <div>
-            <h3 className="text-gray-300 text-sm font-medium mb-3">Kanban Column</h3>
-            <select className="w-full bg-slate-800 text-white border border-slate-700 rounded px-3 py-2">
-              <option>Delivered</option>
-              <option>In Progress</option>
-              <option>To Do</option>
-            </select>
+            <h3 className="text-foreground text-sm font-medium mb-3">Kanban Column</h3>
+            <Select defaultValue="delivered">
+              <SelectTrigger>
+                <SelectValue placeholder="Select a column" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="delivered">Delivered</SelectItem>
+                <SelectItem value="in-progress">In Progress</SelectItem>
+                <SelectItem value="todo">To Do</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
-            <h3 className="text-gray-300 text-sm font-medium mb-3">Assignee Column</h3>
-            <select className="w-full bg-slate-800 text-white border border-slate-700 rounded px-3 py-2">
-              <option>Person</option>
-            </select>
+            <h3 className="text-foreground text-sm font-medium mb-3">Assignee Column</h3>
+            <Select defaultValue="person">
+              <SelectTrigger>
+                <SelectValue placeholder="Select assignee" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="person">Person</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* User info and sign out */}
           {user?.email && (
-            <div className="pt-4 border-t border-slate-700">
-              <p className="text-gray-400 text-sm mb-2">Signed in as:</p>
-              <p className="text-white text-sm mb-3">{user.email}</p>
-              <button
+            <div className="pt-4 border-t border-border">
+              <p className="text-muted-foreground text-sm mb-2">Signed in as:</p>
+              <p className="text-foreground text-sm mb-3">{user.email}</p>
+              <Button
                 onClick={handleSignOut}
-                className="w-full bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors"
+                variant="destructive"
+                size="sm"
+                className="w-full"
               >
                 Sign Out
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -912,17 +967,20 @@ export default function BoardPage() {
                           snapshot.isDragging ? 'rotate-3 scale-105 shadow-2xl' : ''
                         } transition-all duration-200`}
                       >
-                        <div className={`${column.bgColor} rounded-lg p-4 min-h-[500px] ${
-                          snapshot.isDragging ? 'ring-2 ring-white/50' : ''
-                        }`}>
+                        <div className={`rounded-lg border min-h-[500px] shadow-sm ${column.bgColor || 'bg-card'}`}>
                           <div 
                             {...provided.dragHandleProps}
-                            className="flex items-center justify-between mb-4 cursor-grab active:cursor-grabbing"
+                            className="flex items-center justify-between p-4 mb-4 cursor-grab active:cursor-grabbing"
                           >
-                            <h3 className={`${column.color} font-semibold text-lg flex items-center gap-2`}>
-                              <span className="text-gray-300">⋮⋮</span>
-                              {column.name} / {column.cards.length}
-                            </h3>
+                            <div className="flex items-center gap-2">
+                              <MoreHorizontal className={`w-4 h-4 ${column.color || 'text-muted-foreground'}`} />
+                              <h3 className={`font-semibold text-lg ${column.color || 'text-foreground'}`}>
+                                {column.name}
+                              </h3>
+                              <Badge variant="secondary" className="ml-2 bg-white/20 text-white border-white/30">
+                                {column.cards.length}
+                              </Badge>
+                            </div>
                           </div>
                   
                   <Droppable droppableId={column.id}>
@@ -930,37 +988,39 @@ export default function BoardPage() {
                       <div
                         ref={provided.innerRef}
                         {...provided.droppableProps}
-                        className={`space-y-3 mb-4 ${
-                          snapshot.isDraggingOver ? 'bg-black/10 rounded-lg p-2' : ''
+                        className={`space-y-3 mb-4 px-4 ${
+                          snapshot.isDraggingOver ? 'bg-white/20 rounded-lg p-2' : ''
                         } transition-colors min-h-[200px]`}
                       >
                         {column.cards.map((card, index) => (
                           <Draggable key={card.id} draggableId={card.id} index={index}>
                             {(provided, snapshot) => (
-                              <div
+                              <UICard
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
-                                className={`bg-white rounded-lg p-4 shadow-sm border border-gray-200 cursor-move transition-all ${
+                                className={`cursor-move transition-all ${
                                   snapshot.isDragging ? 'shadow-xl rotate-2 scale-105' : 'hover:shadow-md'
                                 }`}
                               >
-                                <h4 className="font-medium text-gray-800 mb-2">
-                                  {card.title}
-                                </h4>
-                                {card.description && (
-                                  <p className="text-sm text-gray-600 mb-3">
-                                    {card.description}
-                                  </p>
-                                )}
-                                <div className="flex items-center justify-between">
-                                  <div className="flex space-x-1">
-                                    <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center">
-                                      <span className="text-white text-xs">👤</span>
+                                <CardContent className="p-4">
+                                  <CardTitle className="text-sm font-medium text-foreground mb-2">
+                                    {card.title}
+                                  </CardTitle>
+                                  {card.description && (
+                                    <CardDescription className="text-xs text-muted-foreground mb-3">
+                                      {card.description}
+                                    </CardDescription>
+                                  )}
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex space-x-1">
+                                      <Badge variant="secondary" className="w-6 h-6 p-0 rounded-full">
+                                        <User className="w-3 h-3" />
+                                      </Badge>
                                     </div>
                                   </div>
-                                </div>
-                              </div>
+                                </CardContent>
+                              </UICard>
                             )}
                           </Draggable>
                         ))}
@@ -970,12 +1030,16 @@ export default function BoardPage() {
                   </Droppable>
 
                   {/* Add Pulse Button */}
-                  <button 
-                    onClick={() => handleAddCard(column.id)}
-                    className={`w-full ${column.addButtonColor} ${column.color} rounded-lg py-3 px-4 font-medium transition-colors flex items-center justify-center`}
-                  >
-                    + Add pulse
-                  </button>
+                  <div className="px-4 pb-4">
+                    <Button 
+                      onClick={() => handleAddCard(column.id)}
+                      className={`w-full ${column.addButtonColor || 'bg-primary hover:bg-primary/90'} text-white border-0`}
+                      size="sm"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add pulse
+                    </Button>
+                  </div>
                         </div>
                       </div>
                     )}

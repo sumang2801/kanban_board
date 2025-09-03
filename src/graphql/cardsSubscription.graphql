@@ -1,0 +1,12 @@
+subscription CardsSubscription($boardId: uuid!) {
+  cards(where: { column: { board_id: { _eq: $boardId } } }) {
+    id
+    title
+    description
+    column_id
+    column {
+      id
+      name
+    }
+  }
+}

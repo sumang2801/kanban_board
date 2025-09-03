@@ -1,0 +1,17 @@
+subscription BoardSubscription($id: uuid!) {
+  boards_by_pk(id: $id) {
+    id
+    name
+    columns {
+      id
+      name
+      board_id
+      cards {
+        id
+        title
+        description
+        column_id
+      }
+    }
+  }
+}

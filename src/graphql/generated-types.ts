@@ -6968,6 +6968,27 @@ export type Virus_Updates = {
   where: Virus_Bool_Exp;
 };
 
+export type BoardSubscriptionSubscriptionVariables = Exact<{
+  id: Scalars['uuid']['input'];
+}>;
+
+
+export type BoardSubscriptionSubscription = { __typename?: 'subscription_root', boards_by_pk?: { __typename?: 'boards', id: any, name: string, columns: Array<{ __typename?: 'columns', id: any, name?: string | null, board_id: any, cards: Array<{ __typename?: 'cards', id: any, title: string, description: string, column_id: any }> }> } | null };
+
+export type CardsSubscriptionSubscriptionVariables = Exact<{
+  boardId: Scalars['uuid']['input'];
+}>;
+
+
+export type CardsSubscriptionSubscription = { __typename?: 'subscription_root', cards: Array<{ __typename?: 'cards', id: any, title: string, description: string, column_id: any, column: { __typename?: 'columns', id: any, name?: string | null } }> };
+
+export type ColumnsSubscriptionSubscriptionVariables = Exact<{
+  boardId: Scalars['uuid']['input'];
+}>;
+
+
+export type ColumnsSubscriptionSubscription = { __typename?: 'subscription_root', columns: Array<{ __typename?: 'columns', id: any, name?: string | null, board_id: any, cards: Array<{ __typename?: 'cards', id: any, title: string, description: string }> }> };
+
 export type CreateCardMutationVariables = Exact<{
   title: Scalars['String']['input'];
   description?: InputMaybe<Scalars['String']['input']>;
@@ -6982,7 +7003,7 @@ export type GetBoardQueryVariables = Exact<{
 }>;
 
 
-export type GetBoardQuery = { __typename?: 'query_root', boards_by_pk?: { __typename?: 'boards', id: any, name: string, columns: Array<{ __typename?: 'columns', id: any, cards: Array<{ __typename?: 'cards', id: any, title: string, description: string }> }> } | null };
+export type GetBoardQuery = { __typename?: 'query_root', boards_by_pk?: { __typename?: 'boards', id: any, name: string, columns: Array<{ __typename?: 'columns', id: any, name?: string | null, cards: Array<{ __typename?: 'cards', id: any, title: string, description: string }> }> } | null };
 
 export type GetBoardsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -7005,6 +7026,122 @@ export type UpdateCardMutationVariables = Exact<{
 export type UpdateCardMutation = { __typename?: 'mutation_root', update_cards_by_pk?: { __typename?: 'cards', id: any, title: string, description: string, column_id: any } | null };
 
 
+export const BoardSubscriptionDocument = gql`
+    subscription BoardSubscription($id: uuid!) {
+  boards_by_pk(id: $id) {
+    id
+    name
+    columns {
+      id
+      name
+      board_id
+      cards {
+        id
+        title
+        description
+        column_id
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useBoardSubscriptionSubscription__
+ *
+ * To run a query within a React component, call `useBoardSubscriptionSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useBoardSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useBoardSubscriptionSubscription({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useBoardSubscriptionSubscription(baseOptions: Apollo.SubscriptionHookOptions<BoardSubscriptionSubscription, BoardSubscriptionSubscriptionVariables> & ({ variables: BoardSubscriptionSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<BoardSubscriptionSubscription, BoardSubscriptionSubscriptionVariables>(BoardSubscriptionDocument, options);
+      }
+export type BoardSubscriptionSubscriptionHookResult = ReturnType<typeof useBoardSubscriptionSubscription>;
+export type BoardSubscriptionSubscriptionResult = Apollo.SubscriptionResult<BoardSubscriptionSubscription>;
+export const CardsSubscriptionDocument = gql`
+    subscription CardsSubscription($boardId: uuid!) {
+  cards(where: {column: {board_id: {_eq: $boardId}}}) {
+    id
+    title
+    description
+    column_id
+    column {
+      id
+      name
+    }
+  }
+}
+    `;
+
+/**
+ * __useCardsSubscriptionSubscription__
+ *
+ * To run a query within a React component, call `useCardsSubscriptionSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useCardsSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCardsSubscriptionSubscription({
+ *   variables: {
+ *      boardId: // value for 'boardId'
+ *   },
+ * });
+ */
+export function useCardsSubscriptionSubscription(baseOptions: Apollo.SubscriptionHookOptions<CardsSubscriptionSubscription, CardsSubscriptionSubscriptionVariables> & ({ variables: CardsSubscriptionSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<CardsSubscriptionSubscription, CardsSubscriptionSubscriptionVariables>(CardsSubscriptionDocument, options);
+      }
+export type CardsSubscriptionSubscriptionHookResult = ReturnType<typeof useCardsSubscriptionSubscription>;
+export type CardsSubscriptionSubscriptionResult = Apollo.SubscriptionResult<CardsSubscriptionSubscription>;
+export const ColumnsSubscriptionDocument = gql`
+    subscription ColumnsSubscription($boardId: uuid!) {
+  columns(where: {board_id: {_eq: $boardId}}) {
+    id
+    name
+    board_id
+    cards {
+      id
+      title
+      description
+    }
+  }
+}
+    `;
+
+/**
+ * __useColumnsSubscriptionSubscription__
+ *
+ * To run a query within a React component, call `useColumnsSubscriptionSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useColumnsSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useColumnsSubscriptionSubscription({
+ *   variables: {
+ *      boardId: // value for 'boardId'
+ *   },
+ * });
+ */
+export function useColumnsSubscriptionSubscription(baseOptions: Apollo.SubscriptionHookOptions<ColumnsSubscriptionSubscription, ColumnsSubscriptionSubscriptionVariables> & ({ variables: ColumnsSubscriptionSubscriptionVariables; skip?: boolean; } | { skip: boolean; }) ) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<ColumnsSubscriptionSubscription, ColumnsSubscriptionSubscriptionVariables>(ColumnsSubscriptionDocument, options);
+      }
+export type ColumnsSubscriptionSubscriptionHookResult = ReturnType<typeof useColumnsSubscriptionSubscription>;
+export type ColumnsSubscriptionSubscriptionResult = Apollo.SubscriptionResult<ColumnsSubscriptionSubscription>;
 export const CreateCardDocument = gql`
     mutation CreateCard($title: String!, $description: String, $column_id: uuid!) {
   insert_cards_one(
@@ -7052,6 +7189,7 @@ export const GetBoardDocument = gql`
     name
     columns {
       id
+      name
       cards {
         id
         title
@@ -7178,7 +7316,7 @@ export const UpdateCardDocument = gql`
     mutation UpdateCard($id: uuid!, $title: String, $description: String, $column_id: uuid) {
   update_cards_by_pk(
     pk_columns: {id: $id}
-    _set: {title: $title, description: $description, column_id: $column_id}
+    _set: {title: $title, description: $description}
   ) {
     id
     title
