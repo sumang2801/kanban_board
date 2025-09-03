@@ -564,18 +564,7 @@ export default function BoardPage() {
       });
       console.log('✅ Card moved successfully in database');
       
-      // Broadcast to other clients using standard column IDs
-      const standardFromColumnId = columnMapping.get(source.droppableId) || source.droppableId;
-      const standardToColumnId = columnMapping.get(destination.droppableId) || destination.droppableId;
-      
-      multiClientSubscriptionManager.broadcastUpdate(boardId, 'card_moved', {
-        cardId: movedCard.id,
-        fromColumnId: standardFromColumnId,
-        toColumnId: standardToColumnId,
-        toIndex: destination.index,
-        card: movedCard
-      });
-      console.log(`📡 Broadcasted card move with standard IDs: ${standardFromColumnId} -> ${standardToColumnId}`);
+      console.log('📡 Card move will be synced via GraphQL subscriptions');
       
     } catch (error) {
       console.error('❌ Error moving card, reverting:', error);
@@ -610,20 +599,9 @@ export default function BoardPage() {
       
       console.log('✅ Card creation result:', result);
       
-      // Broadcast to other clients using standard column ID
+      // GraphQL subscriptions will handle real-time sync automatically
       if (result.data?.insert_cards_one) {
-        const createdCard = result.data.insert_cards_one;
-        const standardColumnId = columnMapping.get(columnId) || columnId;
-        
-        multiClientSubscriptionManager.broadcastUpdate(boardId, 'card_created', {
-          card: {
-            id: createdCard.id,
-            title: createdCard.title,
-            description: createdCard.description
-          },
-          columnId: standardColumnId
-        });
-        console.log(`📡 Broadcasted card creation with standard column ID: ${standardColumnId}`);
+        console.log('📡 Card creation will be synced via GraphQL subscriptions');
       }
       
       // Refetch the board data to get the new card
