@@ -37,6 +37,8 @@ export function useBoardSubscription({
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const client = useApolloClient();
 
+  console.log('🔌 Initializing GraphQL subscription for board:', boardId);
+
   // Subscribe to board changes
   const {
     data: boardData,
@@ -49,9 +51,7 @@ export function useBoardSubscription({
       setIsConnected(true);
       setConnectionError(null);
       
-      // TEMPORARILY DISABLED: Update the Apollo cache with subscription data to sync with queries
-      // This was causing optimistic updates to be overridden immediately
-      /*
+      // Update the Apollo cache with subscription data for real-time sync
       if (data.data?.boards_by_pk) {
         try {
           client.writeQuery({
@@ -64,9 +64,9 @@ export function useBoardSubscription({
           console.log('🔄 Updated Apollo cache with subscription data');
         } catch (cacheError) {
           console.warn('⚠️ Failed to update cache:', cacheError);
+          // Don't fail completely if cache update fails
         }
       }
-      */
       
       if (onBoardUpdate && data.data) {
         onBoardUpdate(data.data);
@@ -83,11 +83,18 @@ export function useBoardSubscription({
   });
 
   useEffect(() => {
+    console.log('📊 Subscription state:', { 
+      loading: boardLoading, 
+      error: boardError, 
+      hasData: !!boardData 
+    });
+    
     if (!boardLoading && !boardError) {
       setIsConnected(true);
       setConnectionError(null);
+      console.log('✅ GraphQL subscription connected successfully');
     }
-  }, [boardLoading, boardError]);
+  }, [boardLoading, boardError, boardData]);
 
   return {
     isConnected,

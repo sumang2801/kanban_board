@@ -7,7 +7,7 @@ import { useGetBoardQuery, useCreateCardMutation, useUpdateCardMutation } from '
 import ProtectedRoute from '@/components/ProtectedRoute';
 import ConnectionStatus from '@/components/ConnectionStatus';
 import { useSignOut, useUserData, useAuthenticationStatus } from '@nhost/react';
-import { multiClientSubscriptionManager } from '@/lib/multiClientSync';
+import { useBoardSubscription } from '@/hooks/useBoardSubscription';
 import { Button } from '@/components/ui/button';
 import { Card as UICard, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -43,6 +43,20 @@ export default function BoardPage() {
     variables: { id: boardId },
     fetchPolicy: 'cache-first', // Use cached data first, only fetch from network if not in cache
     notifyOnNetworkStatusChange: false // Don't notify on network changes to prevent re-renders
+  });
+
+  // GraphQL Subscription for real-time updates
+  const { 
+    isConnected, 
+    connectionError, 
+    loading: subscriptionLoading 
+  } = useBoardSubscription({
+    boardId,
+    onBoardUpdate: (data) => {
+      console.log('📡 Received board update from GraphQL subscription:', data);
+      // The subscription automatically updates Apollo cache, 
+      // which will trigger re-renders of components using the data
+    }
   });
 
   // Column mapping for multi-client sync (maps GraphQL UUIDs to standard column IDs)
@@ -135,173 +149,6 @@ export default function BoardPage() {
     return columnsWithCards;
   };
 
-  // Subscribe to multi-client updates via Server-Sent Events
-  // This effect runs after column mapping is established
-  useEffect(() => {
-    if (reverseColumnMapping.size === 0 || columns.length === 0) {
-      console.log('⏳ Waiting for column mapping and data to be ready before subscribing');
-      return;
-    }
-
-    console.log('🔄 Setting up multi-client subscription with ready column mapping');
-    
-    // Force disconnect any existing subscription first
-    const cleanup = () => {
-      console.log('🧹 Cleaning up previous subscription');
-      multiClientSubscriptionManager.forceDisconnect();
-    };
-    
-    cleanup();
-    
-    // Small delay to ensure cleanup completes
-    const timer = setTimeout(() => {
-      const unsubscribe = multiClientSubscriptionManager.subscribe(boardId, (data) => {
-        console.log('🌐 Received multi-client update:', data);
-        console.log('🏗️ Current columns:', columns.map((c: any) => ({ id: c.id, name: c.name, cards: c.cards.length })));
-        
-        if (data.type === 'board_update') {
-          const { updateType, data: updateData } = data;
-          
-          switch (updateType) {
-            case 'card_moved':
-              // Handle card movement from other clients
-              const { cardId, fromColumnId, toColumnId, toIndex: cardToIndex } = updateData;
-              console.log(`🚚 Processing card move: ${cardId} from ${fromColumnId} to ${toColumnId} at index ${cardToIndex}`);
-              
-              setColumns(prevColumns => {
-                const newColumns = [...prevColumns];
-                
-                // Map standard column IDs to actual GraphQL column IDs
-                let actualFromColumnId = fromColumnId;
-                let actualToColumnId = toColumnId;
-                
-                if (reverseColumnMapping.size > 0) {
-                  actualFromColumnId = reverseColumnMapping.get(fromColumnId) || fromColumnId;
-                  actualToColumnId = reverseColumnMapping.get(toColumnId) || toColumnId;
-                  console.log(`🗺️ Mapped column IDs: ${fromColumnId}->${actualFromColumnId}, ${toColumnId}->${actualToColumnId}`);
-                }
-                
-                const fromColumn = newColumns.find(col => col.id === actualFromColumnId);
-                const toColumn = newColumns.find(col => col.id === actualToColumnId);
-                
-                console.log('🔍 Found columns:', { 
-                  fromColumn: fromColumn ? `${fromColumn.id} (${fromColumn.name})` : 'null',
-                  toColumn: toColumn ? `${toColumn.id} (${toColumn.name})` : 'null'
-                });
-                
-                if (fromColumn && toColumn) {
-                  const cardIndex = fromColumn.cards.findIndex(card => card.id === cardId);
-                  console.log(`🎯 Card index in source column: ${cardIndex}`);
-                  
-                  if (cardIndex !== -1) {
-                    const [movedCard] = fromColumn.cards.splice(cardIndex, 1);
-                    toColumn.cards.splice(cardToIndex, 0, movedCard);
-                    console.log('✅ Card moved in UI state');
-                  } else {
-                    console.log('⚠️ Card not found in source column, possibly already moved');
-                  }
-                } else {
-                  console.log('❌ Could not find source or destination column');
-                }
-                
-                return newColumns;
-              });
-              break;
-              
-            case 'card_created':
-              // Handle new card creation from other clients
-              const { card, columnId } = updateData;
-              console.log(`📝 Processing card creation: ${card.title} in column ${columnId}`);
-              
-              setColumns(prevColumns => {
-                const newColumns = [...prevColumns];
-                
-                // Map standard column ID to actual GraphQL column ID
-                let actualColumnId = columnId;
-                if (reverseColumnMapping.size > 0) {
-                  actualColumnId = reverseColumnMapping.get(columnId) || columnId;
-                  console.log(`🗺️ Mapped column ID: ${columnId}->${actualColumnId}`);
-                }
-                
-                const targetColumn = newColumns.find(col => col.id === actualColumnId);
-                
-                console.log('🔍 Target column found:', targetColumn ? `${targetColumn.id} (${targetColumn.name})` : 'null');
-                
-                if (targetColumn) {
-                  // Check if card already exists to avoid duplicates
-                  if (!targetColumn.cards.find(c => c.id === card.id)) {
-                    targetColumn.cards.push(card);
-                    console.log('✅ Card added to UI state');
-                  } else {
-                    console.log('⚠️ Card already exists, skipping duplicate');
-                  }
-                } else {
-                  console.log('❌ Target column not found');
-                }
-                
-                return newColumns;
-              });
-              break;
-              
-            case 'card_updated':
-              // Handle card updates from other clients
-              const { updatedCard } = updateData;
-              
-              setColumns(prevColumns => {
-                const newColumns = [...prevColumns];
-                
-                for (const column of newColumns) {
-                  const cardIndex = column.cards.findIndex(c => c.id === updatedCard.id);
-                  if (cardIndex !== -1) {
-                    column.cards[cardIndex] = { ...column.cards[cardIndex], ...updatedCard };
-                    break;
-                  }
-                }
-                
-                return newColumns;
-              });
-              break;
-              
-            case 'column_reordered':
-              // Handle column reordering from other clients
-              const { columnId: reorderedColumnId, fromIndex, toIndex: columnToIndex } = updateData;
-              console.log(`🔄 Processing column reorder: column ${reorderedColumnId} from index ${fromIndex} to ${columnToIndex}`);
-              
-              setColumns(prevColumns => {
-                const newColumns = [...prevColumns];
-                
-                // Find the column being moved
-                const columnIndex = newColumns.findIndex(col => col.id === reorderedColumnId);
-                
-                if (columnIndex !== -1) {
-                  // Remove the column from its current position
-                  const [movedColumn] = newColumns.splice(columnIndex, 1);
-                  // Insert it at the new position
-                  newColumns.splice(columnToIndex, 0, movedColumn);
-                  console.log('✅ Column reordered in UI state');
-                  
-                  // Save the new order to localStorage
-                  localStorage.setItem(`kanban-columns-order-${boardId}`, JSON.stringify(newColumns));
-                } else {
-                  console.log('❌ Column to reorder not found');
-                }
-                
-                return newColumns;
-              });
-              break;
-          }
-        }
-      });
-
-      return unsubscribe;
-    }, 100);
-    
-    return () => {
-      clearTimeout(timer);
-      cleanup();
-    };
-  }, [boardId, reverseColumnMapping, columns.length]); // Only depend on columns.length, not the entire array
-
   // GraphQL mutations
   const [createCard] = useCreateCardMutation();
   const [updateCard] = useUpdateCardMutation();
@@ -344,14 +191,7 @@ export default function BoardPage() {
       // Store cards in localStorage for persistence across navigation
       localStorage.setItem(`kanban-cards-${boardId}`, JSON.stringify(updatedColumns));
       
-      // Broadcast to other clients using standard column ID for real-time sync
-      const standardColumnId = columnMapping.get(columnId) || columnId.replace('temp-', '');
-      multiClientSubscriptionManager.broadcastUpdate(boardId, 'card_created', {
-        card: newCard,
-        columnId: standardColumnId
-      });
-      
-      console.log('✅ Card created locally, saved to localStorage, and broadcasted');
+      console.log('✅ Card created locally and saved to localStorage - GraphQL subscription will handle real-time sync');
       return;
     }
 
@@ -393,18 +233,7 @@ export default function BoardPage() {
           return updatedColumns;
         });
         
-        // Broadcast to other clients using standard column ID
-        const standardColumnId = columnMapping.get(columnId) || columnId;
-        
-        multiClientSubscriptionManager.broadcastUpdate(boardId, 'card_created', {
-          card: {
-            id: createdCard.id,
-            title: createdCard.title,
-            description: createdCard.description
-          },
-          columnId: standardColumnId
-        });
-        console.log(`📡 Broadcasted card creation with standard column ID: ${standardColumnId}`);
+        console.log('✅ Card created successfully with GraphQL subscription handling real-time sync');
       }
       
       // DON'T refetch - this was causing cards to disappear
@@ -464,13 +293,7 @@ export default function BoardPage() {
       
       console.log('🔄 Column reordered and saved to localStorage');
       
-      // Broadcast column reorder for real-time sync
-      multiClientSubscriptionManager.broadcastUpdate(boardId, 'column_reordered', {
-        columnId: movedColumn.id,
-        fromIndex: source.index,
-        toIndex: destination.index
-      });
-      
+      console.log('✅ Column reordered - GraphQL subscription will handle real-time sync');
       return;
     }
 
@@ -492,18 +315,7 @@ export default function BoardPage() {
     // Save to localStorage for temporary columns
     localStorage.setItem(`kanban-cards-${boardId}`, JSON.stringify(newColumns));
 
-    // Broadcast the move for real-time sync
-    const standardFromColumnId = columnMapping.get(source.droppableId) || source.droppableId.replace('temp-', '');
-    const standardToColumnId = columnMapping.get(destination.droppableId) || destination.droppableId.replace('temp-', '');
-
-    multiClientSubscriptionManager.broadcastUpdate(boardId, 'card_moved', {
-      cardId: movedCard.id,
-      fromColumnId: standardFromColumnId,
-      toColumnId: standardToColumnId,
-      toIndex: destination.index
-    });
-
-    console.log('✅ Card moved locally and broadcasted');
+    console.log('✅ Card moved locally - GraphQL subscription will handle real-time sync');
 
     // Try to update database if not using temporary columns
     const isTemporaryMove = source.droppableId.startsWith('temp-') || destination.droppableId.startsWith('temp-');
@@ -1061,7 +873,11 @@ export default function BoardPage() {
         )}
       </div>
     </div>
-    <ConnectionStatus boardId={boardId} />
+    <ConnectionStatus 
+      boardId={boardId} 
+      subscriptionConnected={isConnected}
+      subscriptionError={connectionError}
+    />
     </ProtectedRoute>
   );
 }
